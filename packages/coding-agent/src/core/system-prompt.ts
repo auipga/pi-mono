@@ -122,6 +122,7 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
 			addGuideline(`Always use ${enabled_tools} tools instead of bash for file exploration (faster, respects .gitignore)`);
 		}
 		if (disabled_tools.length > 0) {
+			// TODO: list all (internal + installed - enabled), not just these 4.
 			addGuideline(`Never use bash to do what a disabled tool is meant for - namely: ${disabled_tools}`);
 		}
 	}
