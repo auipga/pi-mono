@@ -102,11 +102,11 @@ export default function questionnaire(pi: ExtensionAPI) {
 			const result = await ctx.ui.custom<QuestionnaireResult>((tui, theme, _kb, done) => {
 				// State
 				let currentTab = 0;
-				let optionIndex = 0;
 				let inputMode = false;
 				let inputQuestionId: string | null = null;
 				let cachedLines: string[] | undefined;
 				const answers = new Map<string, Answer>();
+				const optionIndexByQuestion = new Map<string, number>();
 
 				// Editor for "Type something" option
 				const editorTheme: EditorTheme = {
@@ -145,6 +145,18 @@ export default function questionnaire(pi: ExtensionAPI) {
 					return opts;
 				}
 
+				function currentOptionIndex(): number {
+					const q = currentQuestion();
+					if (!q) return 0;
+					return optionIndexByQuestion.get(q.id) ?? 0;
+				}
+
+				function setCurrentOptionIndex(index: number) {
+					const q = currentQuestion();
+					if (!q) return;
+					optionIndexByQuestion.set(q.id, index);
+				}
+
 				function allAnswered(): boolean {
 					return questions.every((q) => answers.has(q.id));
 				}
@@ -159,7 +171,7 @@ export default function questionnaire(pi: ExtensionAPI) {
 					} else {
 						currentTab = questions.length; // Submit tab
 					}
-					optionIndex = 0;
+					setCurrentOptionIndex(Math.min(currentOptionIndex(), currentOptions().length - 1));
 					refresh();
 				}
 
@@ -200,13 +212,13 @@ export default function questionnaire(pi: ExtensionAPI) {
 					if (isMulti) {
 						if (matchesKey(data, Key.tab) || matchesKey(data, Key.right)) {
 							currentTab = (currentTab + 1) % totalTabs;
-							optionIndex = 0;
+							setCurrentOptionIndex(Math.min(currentOptionIndex(), currentOptions().length - 1));
 							refresh();
 							return;
 						}
 						if (matchesKey(data, Key.shift("tab")) || matchesKey(data, Key.left)) {
 							currentTab = (currentTab - 1 + totalTabs) % totalTabs;
-							optionIndex = 0;
+							setCurrentOptionIndex(Math.min(currentOptionIndex(), currentOptions().length - 1));
 							refresh();
 							return;
 						}
@@ -224,18 +236,19 @@ export default function questionnaire(pi: ExtensionAPI) {
 
 					// Option navigation
 					if (matchesKey(data, Key.up)) {
-						optionIndex = Math.max(0, optionIndex - 1);
+						setCurrentOptionIndex(Math.max(0, currentOptionIndex() - 1));
 						refresh();
 						return;
 					}
 					if (matchesKey(data, Key.down)) {
-						optionIndex = Math.min(opts.length - 1, optionIndex + 1);
+						setCurrentOptionIndex(Math.min(opts.length - 1, currentOptionIndex() + 1));
 						refresh();
 						return;
 					}
 
 					// Select option
 					if (matchesKey(data, Key.enter) && q) {
+						const optionIndex = currentOptionIndex();
 						const opt = opts[optionIndex];
 						if (opt.isOther) {
 							inputMode = true;
@@ -295,7 +308,7 @@ export default function questionnaire(pi: ExtensionAPI) {
 					function renderOptions() {
 						for (let i = 0; i < opts.length; i++) {
 							const opt = opts[i];
-							const selected = i === optionIndex;
+							const selected = i === currentOptionIndex();
 							const isOther = opt.isOther === true;
 							const prefix = selected ? theme.fg("accent", "> ") : "  ";
 							const color = selected ? "accent" : "text";
