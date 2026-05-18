@@ -109,10 +109,21 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
 	const hasRead = tools.includes("read");
 
 	// File exploration guidelines
-	if (hasBash && !hasGrep && !hasFind && !hasLs) {
-		addGuideline("Use bash for file operations like ls, rg, find");
-	} else if (hasBash && (hasGrep || hasFind || hasLs)) {
-		addGuideline("Prefer grep/find/ls tools over bash for file exploration (faster, respects .gitignore)");
+	if (hasBash) {
+		const internal_tools = Object.entries({
+			grep: hasGrep,
+			find: hasFind,
+			ls: hasLs,
+			read: hasRead,
+		});
+		const enabled_tools = internal_tools.filter(([, present]) => present).map(([tool]) => tool).join(", ");
+		const disabled_tools = internal_tools.filter(([, present]) => !present).map(([tool]) => tool).join(", ");
+		if (enabled_tools.length > 0) {
+			addGuideline(`Always use ${enabled_tools} tools instead of bash for file exploration (faster, respects .gitignore)`);
+		}
+		if (disabled_tools.length > 0) {
+			addGuideline(`Never use bash to do what a disabled tool is meant for - namely: ${disabled_tools}`);
+		}
 	}
 
 	for (const guideline of promptGuidelines ?? []) {
