@@ -26,6 +26,8 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 // Default interactive commands - editors, pagers, git ops, TUIs
 const DEFAULT_INTERACTIVE_COMMANDS = [
 	// Editors
+	"v",
+	"vv",
 	"vim",
 	"nvim",
 	// "vi",
