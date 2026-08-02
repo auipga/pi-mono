@@ -40,3 +40,7 @@ plans/
 .pi/hf-sessions/
 .pi/hf-sessions-backup/
 collect.sh
+
+# custom by auipga
+packages/ai/src/providers/*.models.ts
+packages/ai/src/*.generated.ts
