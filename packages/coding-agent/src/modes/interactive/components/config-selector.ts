@@ -541,18 +541,7 @@ class ResourceList implements Component, Focusable {
 		const pattern = this.getResourcePattern(item);
 		const disablePattern = `-${pattern}`;
 		const enablePattern = `+${pattern}`;
-
-		// Filter out existing patterns for this resource
-		const updated = current.filter((p) => {
-			const stripped = p.startsWith("!") || p.startsWith("+") || p.startsWith("-") ? p.slice(1) : p;
-			return stripped !== pattern;
-		});
-
-		if (enabled) {
-			updated.push(enablePattern);
-		} else {
-			updated.push(disablePattern);
-		}
+		const updated = this.replacePatternKeepingPosition(current, pattern, enabled ? enablePattern : disablePattern);
 
 		if (scope === "project") {
 			if (arrayKey === "extensions") {
@@ -606,18 +595,7 @@ class ResourceList implements Component, Focusable {
 		const pattern = this.getPackageResourcePattern(item);
 		const disablePattern = `-${pattern}`;
 		const enablePattern = `+${pattern}`;
-
-		// Filter out existing patterns for this resource
-		const updated = current.filter((p) => {
-			const stripped = p.startsWith("!") || p.startsWith("+") || p.startsWith("-") ? p.slice(1) : p;
-			return stripped !== pattern;
-		});
-
-		if (enabled) {
-			updated.push(enablePattern);
-		} else {
-			updated.push(disablePattern);
-		}
+		const updated = this.replacePatternKeepingPosition(current, pattern, enabled ? enablePattern : disablePattern);
 
 		(pkg as Record<string, unknown>)[arrayKey] = updated.length > 0 ? updated : undefined;
 
@@ -634,6 +612,14 @@ class ResourceList implements Component, Focusable {
 		} else {
 			this.settingsManager.setPackages(packages);
 		}
+	}
+
+	private replacePatternKeepingPosition(entries: string[], pattern: string, replacement: string): string[] {
+		const index = entries.findIndex((entry) => this.getPatternEntryTarget(entry) === pattern);
+		if (index === -1) return [...entries, replacement];
+		const updated = [...entries];
+		updated[index] = replacement;
+		return updated;
 	}
 
 	private renderCheckbox(item: ResourceItem): string {
@@ -672,7 +658,7 @@ class ResourceList implements Component, Focusable {
 		const current = (this.settingsManager.getProjectSettings()[item.resourceType] ?? []) as string[];
 		const pattern = this.isInheritedGlobalItem(item) ? item.path : this.getResourcePatternForScope(item, "project");
 		const patterns = this.getTopLevelOverridePatterns(item, "project");
-		const updated = current.filter((entry) => {
+		let updated = current.filter((entry) => {
 			const target = this.getPatternEntryTarget(entry);
 			if ((entry.startsWith("!") || entry.startsWith("+") || entry.startsWith("-")) && patterns.has(target))
 				return false;
@@ -680,7 +666,7 @@ class ResourceList implements Component, Focusable {
 		});
 		if (state !== "inherit") {
 			if (this.isInheritedGlobalItem(item) && !updated.includes(pattern)) updated.push(pattern);
-			updated.push(`${state === "load" ? "+" : "-"}${pattern}`);
+			updated = this.replacePatternKeepingPosition(updated, pattern, `${state === "load" ? "+" : "-"}${pattern}`);
 		}
 		this.setProjectTopLevelPaths(item.resourceType, updated);
 		return true;
@@ -715,10 +701,8 @@ class ResourceList implements Component, Focusable {
 			packages[pkgIndex] = pkg;
 		}
 		const pattern = this.getPackageResourcePattern(item);
-		const updated = ((pkg[item.resourceType] ?? []) as string[]).filter(
-			(entry) => this.getPatternEntryTarget(entry) !== pattern,
-		);
-		if (state !== "inherit") updated.push(`${state === "load" ? "+" : "-"}${pattern}`);
+		let updated = ((pkg[item.resourceType] ?? []) as string[]).filter((entry) => this.getPatternEntryTarget(entry) !== pattern);
+		if (state !== "inherit") updated = this.replacePatternKeepingPosition(updated, pattern, `${state === "load" ? "+" : "-"}${pattern}`);
 		(pkg as Record<string, unknown>)[item.resourceType] = updated.length > 0 ? updated : undefined;
 		if (!RESOURCE_TYPES.some((key) => (pkg as Record<string, unknown>)[key] !== undefined)) {
 			if (pkg.autoload === false) packages.splice(pkgIndex, 1);

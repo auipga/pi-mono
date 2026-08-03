@@ -441,6 +441,47 @@ describe("package commands", () => {
 		expect(settingsManager.getProjectSettings().packages).toEqual([]);
 	});
 
+	it("keeps prompt overrides in place when toggled", async () => {
+		const storage = new InMemorySettingsStorage();
+		storage.withLock("global", () => JSON.stringify({ packages: [{ source: "npm:pi-tools", prompts: ["+prompts/first.md", "prompts/second.md"] }] }));
+		const settingsManager = SettingsManager.fromStorage(storage, { projectTrusted: true });
+		const selector = new ConfigSelectorComponent(
+			{
+				global: {
+					prompts: [
+						{
+							path: join(packageDir, "prompts", "first.md"),
+							enabled: true,
+							metadata: { source: "npm:pi-tools", scope: "user", origin: "package", baseDir: packageDir },
+						},
+					],
+					extensions: [],
+					skills: [],
+					themes: [],
+				},
+				project: {
+					prompts: [],
+					extensions: [],
+					skills: [],
+					themes: [],
+				},
+			},
+			settingsManager,
+			projectDir,
+			agentDir,
+			() => {},
+			() => {},
+			() => {},
+			24,
+			"global",
+		);
+
+		selector.getResourceList().handleInput(" ");
+		expect(settingsManager.getGlobalSettings().packages).toEqual([
+			{ source: "npm:pi-tools", prompts: ["-prompts/first.md", "prompts/second.md"] },
+		]);
+	});
+
 	it("shows a friendly error for unknown install options", async () => {
 		const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
