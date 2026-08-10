@@ -355,6 +355,21 @@ Content`,
 			expect(agentsFiles.some((f) => f.path.includes("AGENTS.md"))).toBe(true);
 		});
 
+		it("should not load the global context file again through a symlinked cwd", async () => {
+			const realAgentDir = join(tempDir, "real-agent");
+			const linkedAgentDir = join(tempDir, "linked-agent");
+			mkdirSync(realAgentDir);
+			symlinkSync(realAgentDir, linkedAgentDir, "dir");
+			writeFileSync(join(realAgentDir, "AGENTS.md"), "global instructions");
+
+			const loader = new DefaultResourceLoader({ cwd: realAgentDir, agentDir: linkedAgentDir });
+			await loader.reload();
+
+			expect(loader.getAgentsFiles().agentsFiles).toEqual([
+				{ path: join(linkedAgentDir, "AGENTS.md"), content: "global instructions" },
+			]);
+		});
+
 		it("should prefer AGENTS.override.md within each directory while preserving ancestor layering", async () => {
 			const nestedCwd = join(cwd, "service");
 			mkdirSync(nestedCwd);

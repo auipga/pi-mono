@@ -128,7 +128,7 @@ export function loadProjectContextFiles(options: {
 	const globalContext = loadContextFileFromDir(resolvedAgentDir);
 	if (globalContext) {
 		contextFiles.push(globalContext);
-		seenPaths.add(globalContext.path);
+		seenPaths.add(canonicalizePath(globalContext.path));
 	}
 
 	const ancestorContextFiles: Array<{ path: string; content: string }> = [];
@@ -140,9 +140,12 @@ export function loadProjectContextFiles(options: {
 		const contextFile = loadContextFileFromDir(currentDir);
 		const isShadowed =
 			shadowedContextFile !== undefined && canonicalizePath(contextFile?.path ?? "") === shadowedContextFile;
-		if (contextFile && !isShadowed && !seenPaths.has(contextFile.path)) {
-			ancestorContextFiles.unshift(contextFile);
-			seenPaths.add(contextFile.path);
+		if (contextFile) {
+			const canonicalPath = canonicalizePath(contextFile.path);
+			if (!isShadowed && !seenPaths.has(canonicalPath)) {
+				ancestorContextFiles.unshift(contextFile);
+				seenPaths.add(canonicalPath);
+			}
 		}
 
 		const parentDir = dirname(currentDir);
