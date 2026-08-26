@@ -107,6 +107,10 @@ export default function llamaExtension(pi: ExtensionAPI): void {
 			}
 			const refreshed = await syncCatalog(ctx, client);
 			const loadedModel = refreshed.find((model) => model.id === target.id);
+			if (loadedModel && modelIsLoaded(loadedModel)) {
+				const model = ctx.modelRegistry.find(LLAMA_PROVIDER_ID, loadedModel.id);
+				if (model) await pi.setModel(model);
+			}
 			ctx.ui.notify(
 				loadedModel?.status.value === "loaded" ? `Loaded ${target.id}` : `Load started for ${target.id}`,
 			);
